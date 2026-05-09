@@ -41,6 +41,7 @@ let resizeTimer = null;
 let engine = null;
 let runner = null;
 let animationFrame = null;
+let dropTimers = [];
 let ballRecords = new Map();
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -145,7 +146,7 @@ function completeLogin(user) {
 
   adventures = readJson(getJarKey(), []);
   updateMeta();
-  rebuildJar();
+  rebuildJar({ replayAll: true });
 }
 
 function showAuth() {
@@ -202,6 +203,8 @@ async function handleImageChange() {
 
   if (!file.type.startsWith("image/")) {
     adventureMessage.textContent = "Choose an image file.";
+    imageDataUrl = "";
+    imagePreview.style.backgroundImage = "";
     imageInput.value = "";
     return;
   }
@@ -211,6 +214,8 @@ async function handleImageChange() {
     imagePreview.style.backgroundImage = `url("${imageDataUrl}")`;
   } catch {
     adventureMessage.textContent = "That image could not be loaded.";
+    imageDataUrl = "";
+    imagePreview.style.backgroundImage = "";
     imageInput.value = "";
   }
 }
@@ -221,11 +226,6 @@ async function handleAdventureSubmit(event) {
 
   const title = cleanTitle(titleInput.value);
   const date = dateInput.value;
-
-  if (!imageDataUrl) {
-    adventureMessage.textContent = "Choose an image.";
-    return;
-  }
 
   if (!title) {
     adventureMessage.textContent = "Add a title.";
@@ -242,6 +242,7 @@ async function handleAdventureSubmit(event) {
     title,
     date,
     image: imageDataUrl,
+    color: imageDataUrl ? "" : getRandomPastelColor(),
     createdAt: new Date().toISOString()
   };
 
@@ -255,7 +256,7 @@ async function handleAdventureSubmit(event) {
 
   updateMeta();
   adventureDialog.close();
-  rebuildJar(adventure.id);
+  rebuildJar({ dropAdventureId: adventure.id });
 }
 
 function updateTitleCount() {
@@ -299,7 +300,9 @@ function updateMeta() {
   jarMeta.textContent = `${count} ${noun}${owner}`;
 }
 
-function rebuildJar(dropAdventureId = null) {
+function rebuildJar(options = {}) {
+  const { dropAdventureId = null, replayAll = false } = options;
+
   stopPhysics();
   ballLayer.innerHTML = "";
 
@@ -317,13 +320,14 @@ function rebuildJar(dropAdventureId = null) {
     return;
   }
 
-  setupPhysics(width, height, radius, dropAdventureId);
+  setupPhysics(width, height, radius, { dropAdventureId, replayAll });
 }
 
-function setupPhysics(width, height, radius, dropAdventureId) {
+function setupPhysics(width, height, radius, options) {
   const MatterLib = window.Matter;
-  const { Engine, Runner, Bodies, Body, Composite } = MatterLib;
+  const { Engine, Runner, Bodies, Composite } = MatterLib;
   const wall = Math.max(56, radius * 1.5);
+  const { dropAdventureId, replayAll } = options;
 
   engine = Engine.create();
   engine.gravity.y = 0.92;
@@ -338,43 +342,57 @@ function setupPhysics(width, height, radius, dropAdventureId) {
 
   const boundaries = [
     Bodies.rectangle(width / 2, height + wall * 0.38, width * 0.86, wall, staticOptions),
-    Bodies.rectangle(width * 0.06, height * 0.61, wall, height * 0.75, { ...staticOptions, angle: -0.08 }),
-    Bodies.rectangle(width * 0.94, height * 0.61, wall, height * 0.75, { ...staticOptions, angle: 0.08 }),
-    Bodies.rectangle(width * 0.31, height * 0.1, wall, height * 0.22, staticOptions),
-    Bodies.rectangle(width * 0.69, height * 0.1, wall, height * 0.22, staticOptions),
-    Bodies.rectangle(width * 0.22, height * 0.24, width * 0.33, wall, { ...staticOptions, angle: -0.68 }),
-    Bodies.rectangle(width * 0.78, height * 0.24, width * 0.33, wall, { ...staticOptions, angle: 0.68 })
+    Bodies.rectangle(width * 0.03, height * 0.63, wall, height * 0.82, { ...staticOptions, angle: -0.08 }),
+    Bodies.rectangle(width * 0.97, height * 0.63, wall, height * 0.82, { ...staticOptions, angle: 0.08 })
   ];
 
   Composite.add(engine.world, boundaries);
-
-  adventures.forEach((adventure, index) => {
-    const element = createBallElement(adventure, radius);
-    const isNewDrop = adventure.id === dropAdventureId;
-    const start = isNewDrop
-      ? getDropSpawnPoint(width, height, radius)
-      : getRestoredSpawnPoint(index, width, height, radius);
-    const body = Bodies.circle(start.x, start.y, radius, {
-      restitution: 0.18,
-      friction: 0.28,
-      frictionAir: 0.012,
-      density: 0.0025,
-      label: adventure.id
-    });
-
-    Body.setInertia(body, Infinity);
-    Composite.add(engine.world, body);
-    ballRecords.set(adventure.id, { body, element, radius });
-  });
-
   Runner.run(runner, engine);
   animationFrame = requestAnimationFrame(renderPhysics);
+
+  adventures.forEach((adventure, index) => {
+    const isNewDrop = adventure.id === dropAdventureId;
+
+    if (replayAll) {
+      const timer = setTimeout(() => {
+        addPhysicsBall(adventure, index, radius, getDropSpawnPoint(width, radius));
+      }, index * 430);
+      dropTimers.push(timer);
+      return;
+    }
+
+    const start = isNewDrop
+      ? getDropSpawnPoint(width, radius)
+      : getRestoredSpawnPoint(index, width, height, radius);
+    addPhysicsBall(adventure, index, radius, start);
+  });
 }
 
-function getDropSpawnPoint(width, height, radius) {
+function addPhysicsBall(adventure, index, radius, start) {
+  if (!engine || !window.Matter) {
+    return;
+  }
+
+  const { Bodies, Body, Composite } = window.Matter;
+  const element = createBallElement(adventure, radius);
+  const body = Bodies.circle(start.x, start.y, radius, {
+    restitution: 0.55,
+    friction: 0.16,
+    frictionAir: 0.008,
+    density: 0.0025,
+    label: adventure.id,
+    plugin: { jarIndex: index }
+  });
+
+  Body.setInertia(body, Infinity);
+  Composite.add(engine.world, body);
+  ballRecords.set(adventure.id, { body, element, radius });
+}
+
+function getDropSpawnPoint(width, radius) {
   return {
-    x: width / 2 + (Math.random() - 0.5) * radius * 0.8,
-    y: Math.max(radius, height * 0.09)
+    x: width / 2 + (Math.random() - 0.5) * radius * 0.6,
+    y: -radius * 1.4
   };
 }
 
@@ -422,6 +440,9 @@ function renderPhysics() {
 }
 
 function stopPhysics() {
+  dropTimers.forEach((timer) => clearTimeout(timer));
+  dropTimers = [];
+
   if (animationFrame) {
     cancelAnimationFrame(animationFrame);
     animationFrame = null;
@@ -473,7 +494,7 @@ function createBallElement(adventure, radius) {
     </span>
   `;
 
-  button.querySelector(".ball-image").style.backgroundImage = `url("${adventure.image}")`;
+  applyAdventureVisual(button.querySelector(".ball-image"), adventure);
   button.querySelector(".ball-title").textContent = adventure.title;
   button.querySelector(".ball-date").textContent = formatShortDate(adventure.date);
   button.addEventListener("click", () => openDetail(adventure.id));
@@ -503,7 +524,7 @@ function openDetail(id) {
   selectedAdventureId = id;
   detailTitle.textContent = adventure.title;
   detailDate.textContent = formatDate(adventure.date);
-  detailImage.style.backgroundImage = `url("${adventure.image}")`;
+  applyAdventureVisual(detailImage, adventure);
   detailDialog.showModal();
 }
 
@@ -607,6 +628,29 @@ function normalizeUsername(value) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getRandomPastelColor() {
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 58 + Math.floor(Math.random() * 18);
+  const lightness = 78 + Math.floor(Math.random() * 10);
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+}
+
+function applyAdventureVisual(element, adventure) {
+  const fallbackColor = adventure.color || "#f7e8ff";
+
+  if (adventure.image) {
+    element.style.backgroundColor = fallbackColor;
+    element.style.backgroundImage = `url("${adventure.image}")`;
+    return;
+  }
+
+  element.style.backgroundColor = fallbackColor;
+  element.style.backgroundImage = `
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.58), transparent 26%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(38, 32, 52, 0.08))
+  `;
 }
 
 function createId() {
