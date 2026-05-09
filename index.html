@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Adventure Jar</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js" defer></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell" id="appShell" aria-hidden="true">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>Adventure Jar</h1>
+            <p id="jarMeta">0 adventures</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="ghost-button hidden" type="button" id="logoutButton">Log out</button>
+          <button class="add-button" type="button" id="addButton" aria-label="Add adventure" title="Add adventure" disabled>
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="stage">
+        <section class="jar-wrap" aria-label="Adventure jar">
+          <div class="jar-cap" aria-hidden="true"></div>
+          <div class="jar" id="jar">
+            <div class="jar-shine" aria-hidden="true"></div>
+            <div class="ball-layer" id="ballLayer"></div>
+            <svg class="jar-outline" viewBox="0 0 100 120" preserveAspectRatio="none" aria-hidden="true">
+              <path class="jar-glass" d="M32 2 H68 V16 C78 18 86 27 88 40 L95 109 C96 116 91 119 84 119 H16 C9 119 4 116 5 109 L12 40 C14 27 22 18 32 16 Z"></path>
+              <path class="jar-mouth" d="M29 3 H71"></path>
+              <path class="jar-neck" d="M32 16 H68"></path>
+            </svg>
+          </div>
+          <div class="jar-shadow" aria-hidden="true"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="authDialog">
+      <form class="modal-panel auth-panel" id="authForm">
+        <h2>Adventure Jar</h2>
+        <label>
+          Username
+          <input type="text" id="usernameInput" autocomplete="username" maxlength="28" required>
+        </label>
+        <label>
+          Password
+          <input type="password" id="passwordInput" autocomplete="current-password" minlength="4" required>
+        </label>
+        <p class="form-message" id="authMessage" role="alert"></p>
+        <button class="primary-button" type="submit">Sign in</button>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="adventureDialog">
+      <form class="modal-panel adventure-panel" id="adventureForm">
+        <div class="modal-heading">
+          <h2>New Adventure</h2>
+          <button class="icon-close" type="button" id="cancelAdventureButton" aria-label="Close" title="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+
+        <label class="image-picker" for="imageInput">
+          <span class="image-preview" id="imagePreview"></span>
+          <span>Image</span>
+          <input type="file" id="imageInput" accept="image/*" required>
+        </label>
+
+        <label>
+          Title
+          <span class="input-row">
+            <input type="text" id="titleInput" maxlength="20" required>
+            <span class="character-count" id="titleCount">0/20</span>
+          </span>
+        </label>
+
+        <label>
+          Date
+          <input type="date" id="dateInput" required>
+        </label>
+
+        <p class="form-message" id="adventureMessage" role="alert"></p>
+        <button class="primary-button" type="submit">Add adventure</button>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="detailDialog">
+      <div class="modal-panel detail-panel">
+        <div class="modal-heading">
+          <h2 id="detailTitle">Adventure</h2>
+          <button class="icon-close" type="button" id="closeDetailButton" aria-label="Close" title="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="detail-image" id="detailImage" aria-hidden="true"></div>
+        <p class="detail-date" id="detailDate"></p>
+        <button class="danger-button" type="button" id="deleteAdventureButton">Delete</button>
+      </div>
+    </dialog>
+  </body>
+</html>
