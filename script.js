@@ -255,7 +255,7 @@ async function handleAdventureSubmit(event) {
 
   updateMeta();
   adventureDialog.close();
-  rebuildJar();
+  rebuildJar(adventure.id);
 }
 
 function updateTitleCount() {
@@ -299,7 +299,7 @@ function updateMeta() {
   jarMeta.textContent = `${count} ${noun}${owner}`;
 }
 
-function rebuildJar() {
+function rebuildJar(dropAdventureId = null) {
   stopPhysics();
   ballLayer.innerHTML = "";
 
@@ -317,10 +317,10 @@ function rebuildJar() {
     return;
   }
 
-  setupPhysics(width, height, radius);
+  setupPhysics(width, height, radius, dropAdventureId);
 }
 
-function setupPhysics(width, height, radius) {
+function setupPhysics(width, height, radius, dropAdventureId) {
   const MatterLib = window.Matter;
   const { Engine, Runner, Bodies, Body, Composite } = MatterLib;
   const wall = Math.max(56, radius * 1.5);
@@ -350,8 +350,11 @@ function setupPhysics(width, height, radius) {
 
   adventures.forEach((adventure, index) => {
     const element = createBallElement(adventure, radius);
-    const spread = (Math.random() - 0.5) * radius * 1.2;
-    const body = Bodies.circle(width / 2 + spread, radius + index * 2, radius, {
+    const isNewDrop = adventure.id === dropAdventureId;
+    const start = isNewDrop
+      ? getDropSpawnPoint(width, height, radius)
+      : getRestoredSpawnPoint(index, width, height, radius);
+    const body = Bodies.circle(start.x, start.y, radius, {
       restitution: 0.18,
       friction: 0.28,
       frictionAir: 0.012,
@@ -368,6 +371,31 @@ function setupPhysics(width, height, radius) {
   animationFrame = requestAnimationFrame(renderPhysics);
 }
 
+function getDropSpawnPoint(width, height, radius) {
+  return {
+    x: width / 2 + (Math.random() - 0.5) * radius * 0.8,
+    y: Math.max(radius, height * 0.09)
+  };
+}
+
+function getRestoredSpawnPoint(index, width, height, radius) {
+  const diameter = radius * 2;
+  const columns = Math.max(2, Math.floor((width * 0.72) / (diameter * 0.92)));
+  const row = Math.floor(index / columns);
+  const col = index % columns;
+  const usableWidth = width * 0.72;
+  const left = width * 0.14;
+  const xGap = usableWidth / columns;
+  const offset = row % 2 ? xGap * 0.32 : 0;
+  const x = left + xGap * col + xGap / 2 + offset;
+  const y = height - radius - 18 - row * diameter * 0.76;
+
+  return {
+    x: clamp(x, width * 0.22, width * 0.78),
+    y: clamp(y, height * 0.38, height - radius - 12)
+  };
+}
+
 function renderPhysics() {
   if (!engine) {
     return;
@@ -381,7 +409,7 @@ function renderPhysics() {
     const { body, element, radius } = record;
 
     if (body.position.y > height + radius * 5) {
-      Body.setPosition(body, { x: width / 2, y: radius });
+      Body.setPosition(body, { x: width / 2, y: height * 0.38 });
       Body.setVelocity(body, { x: 0, y: 0 });
     }
 
@@ -575,6 +603,10 @@ function simpleHash(value) {
 
 function normalizeUsername(value) {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function createId() {

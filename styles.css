@@ -177,7 +177,7 @@ h1 {
   width: 45%;
   height: 1.45rem;
   transform: translateX(-50%);
-  border: 2px solid #171717;
+  border: 3px solid #171717;
   border-radius: 0.45rem 0.45rem 0.25rem 0.25rem;
   background:
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 10px),
@@ -231,7 +231,6 @@ h1 {
   border-radius: 28% 28% 10% 10%;
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0 9%, transparent 10% 83%, rgba(0, 0, 0, 0.08) 84% 100%),
-    radial-gradient(ellipse at 48% 34%, transparent 0 48%, rgba(0, 0, 0, 0.08) 49% 51%, transparent 52%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0));
   opacity: 0.78;
   pointer-events: none;
@@ -250,30 +249,20 @@ h1 {
 
 .jar-glass,
 .jar-mouth,
-.jar-neck,
-.jar-shoulder,
-.jar-emboss {
+.jar-neck {
   fill: rgba(255, 255, 255, 0.1);
   stroke: #171717;
-  stroke-width: 1.9;
+  stroke-width: 2.6;
   vector-effect: non-scaling-stroke;
 }
 
 .jar-mouth {
-  stroke-width: 2.2;
+  stroke-width: 3;
 }
 
 .jar-mouth,
-.jar-neck,
-.jar-shoulder,
-.jar-emboss {
+.jar-neck {
   fill: none;
-}
-
-.jar-shoulder,
-.jar-emboss {
-  stroke: rgba(0, 0, 0, 0.34);
-  stroke-width: 1.1;
 }
 
 .jar-shadow {
